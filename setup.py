@@ -35,7 +35,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     install_requires=pathlib.Path("requirements.txt").read_text().splitlines(),
     extras_require={
-        "docs": ["fire", "annoy", "scann == 1.2.*", "tensorflow-ranking"],
+        "docs": ["fire", "annoy", "scann == 1.3.*", "tensorflow-ranking"],
     },
     # PyPI package information.
     classifiers=[

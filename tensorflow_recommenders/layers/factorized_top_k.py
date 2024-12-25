@@ -16,6 +16,7 @@
 """Layers for retrieving top K recommendations from factorized retrieval models."""
 
 import abc
+import sys
 import contextlib
 from typing import Dict, Optional, Text, Tuple, Union
 import uuid
@@ -373,7 +374,7 @@ class Streaming(TopK):
     self._num_parallel_calls = num_parallel_calls
     self._sorted = sorted_order
 
-    self._counter = self.add_weight("counter", dtype=tf.int32, trainable=False)
+    self._counter = self.add_weight(name="counter", dtype=tf.int32, trainable=False)
 
   def index_from_dataset(
       self,
@@ -449,7 +450,7 @@ class Streaming(TopK):
           from state and x.
       """
       state_scores, state_indices = state
-      x_scores, x_indices = x
+      x_scores, x_indices = x      
 
       joined_scores = tf.concat([state_scores, x_scores], axis=1)
       joined_indices = tf.concat([state_indices, x_indices], axis=1)
@@ -460,13 +461,12 @@ class Streaming(TopK):
         k_ = k
 
       scores, indices = tf.math.top_k(joined_scores, k=k_, sorted=self._sorted)
-
       return scores, tf.gather(joined_indices, indices, batch_dims=1)
 
     def enumerate_rows(batch: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
       """Enumerates rows in each batch using a total element counter."""
 
-      starting_counter = self._counter.read_value()
+      starting_counter = tf.identity(self._counter)
       end_counter = self._counter.assign_add(tf.shape(batch)[0])
 
       return tf.range(starting_counter, end_counter), batch
@@ -544,15 +544,10 @@ class BruteForce(TopK):
           "identifier rows). "
       )
 
-    # We need any value that has the correct dtype.
-    identifiers_initial_value = tf.zeros((), dtype=identifiers.dtype)
-
     self._identifiers = self.add_weight(
         name="identifiers",
         dtype=identifiers.dtype,
         shape=identifiers.shape,
-        initializer=tf.keras.initializers.Constant(
-            value=identifiers_initial_value),
         trainable=False)
     self._candidates = self.add_weight(
         name="candidates",
@@ -708,14 +703,10 @@ class ScaNN(TopK):
         candidates).serialize_to_module()
 
     if identifiers is not None:
-      # We need any value that has the correct dtype.
-      identifiers_initial_value = tf.zeros((), dtype=identifiers.dtype)
       self._identifiers = self.add_weight(
           name="identifiers",
           dtype=identifiers.dtype,
           shape=identifiers.shape,
-          initializer=tf.keras.initializers.Constant(
-              value=identifiers_initial_value),
           trainable=False)
       self._identifiers.assign(identifiers)
 

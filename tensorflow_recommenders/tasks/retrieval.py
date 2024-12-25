@@ -168,8 +168,8 @@ class Retrieval(tf.keras.layers.Layer, base.Task):
     Returns:
       loss: Tensor of loss values.
     """
-
-    if len(tf.shape(query_embeddings)) == 3:
+    
+    if tf.shape(query_embeddings).shape[0] == 3:
       scores = tf.einsum(
           "qne,ce->qnc", query_embeddings, candidate_embeddings
       )
@@ -213,14 +213,14 @@ class Retrieval(tf.keras.layers.Layer, base.Task):
     for metric in self._loss_metrics:
       update_ops.append(metric.update_state(loss))
 
-    if compute_metrics and len(tf.shape(query_embeddings)) == 2:
+    if compute_metrics and tf.shape(query_embeddings).shape[0] == 2:
       for metric in self._factorized_metrics:
         update_ops.append(
             metric.update_state(
-                query_embeddings,
+                query_embeddings=query_embeddings,
                 # Slice to the size of query embeddings
                 # if `candidate_embeddings` contains extra negatives.
-                candidate_embeddings[:tf.shape(query_embeddings)[0]],
+                true_candidate_embeddings=candidate_embeddings[:tf.shape(query_embeddings)[0]],
                 true_candidate_ids=candidate_ids,
                 sample_weight=sample_weight)
         )
